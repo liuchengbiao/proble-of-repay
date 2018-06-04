@@ -1,0 +1,202 @@
+﻿1. #error 的用法
+（1）#error 是一种预编译器指示字，用于生成一个编译错误消息 
+
+（2）用法：#error message //注意：message 不需要用双引号包围 
+
+（3）#error 编译指示字用于自定义程序员特有的编译错误消息。类似的，#warning 用于生成编译警告消息
+
+（4）#error 可用于提示编译条件是否满足。编译过程中的任何错误意味着无法生成最终的可执行程序
+
+2. #line 的用法 
+（1）#line 用于强制指定新的行号和编译文件名，并对源程序的代码重新编号 
+
+（2）用法：#line number newFilename //newFilename 可省略 
+
+（3）#line 编译指示字的本质是重定义__LINE__和__FILE__ 
+
+ 
+
+复制代码
+#include <stdio.h>
+//作者 A 写的代码
+//--------------------------开始--------------------------
+//把 line 的下一行定义为第 1 行，文件名为“a.c”
+#line 1 "a.c"
+//--------------------------结束--------------------------
+//作者 B 写的代码
+//--------------------------开始--------------------------
+//把 line 的下一行定义为第 1 行，文件名为“b.c”
+#line 1 "b.c"
+//--------------------------结束--------------------------
+//作者 C 写的代码
+//--------------------------开始--------------------------
+#line 1 "MyCode.c"
+int main(){
+    printf("%s:%d\n",__FILE__,__LINE__);//输出 MyCode.c:4
+    #line 1 "Test.c"
+    printf("%s:%d\n",__FILE__,__LINE__);//输出 Test.c:1
+    return 0;
+}
+//--------------------------结束--------------------------
+复制代码
+3.#pragma 的使用
+（1）#pragma 用于指示编译器完成一些特定的动作
+（2）#pragma 所定义的很多指示字是编译器特有的，在不同的编译器间是不可移植的
+
+    ①预处理器将忽略它不认识的#pragma 指令 
+
+    ②不同编译器可能以不同的方式解释同一条#pragma 指令 
+
+（3）一般用法：#pragma parameter //注意，不同的 parameter 参数语法和意义不同
+
+3.1.#pragma message——用于自定义编译消息 
+（1）message 参数在大多数的编译器中都有相似的实现 
+
+（2）message 参数在编译时输出消息到编译输出窗口中 
+
+（3）message 用于条件编译可提示代码的版本信息 
+
+（4）与#error 和#warning 不同，#pragma message 仅仅代表一条编译消息，不代表程序错误
+
+复制代码
+#include <stdio.h>
+#if defined(ANDROID20)
+    #pragma message("Complie Android SDK 2.0...")
+    #define VERSION "Android 2.0"
+#elif defined(ANDROID23)
+    #pragma message("Complie Android SDK 2.3...")
+    #define VERSION "Android 2.3"
+#elif defined(ANDROID40)
+    #pragma message("Complie Android SDK 4.0...")
+    #define VERSION "Android 4.0"
+#else
+    #error Compile Version is not provided!
+#endif
+
+int main()
+{
+    //可用命令行编译：gcc 24-1.c -DANDROID40
+    //在 gcc 下输出：
+    // 24-1.c:10: note: #pragma message: Complie Android SDK
+4.0...
+    //在 vc\bcc 下输出： Complie Android SDK 4.0...
+    printf("%s\n",VERSION);
+    return 0;
+}
+复制代码
+3.2.#pragma once——用于保证头文件只被编译一次 
+（1）#pragma once 用于保证头文件只被编译一次
+（2）#pragma once 是编译器相关的，不一定被支持（vc\gcc 都支持,bcc 不支持！）
+
+（3）#pragma once 比#ifndef…#define…#endif 效率高，因为后者定义的头文件仍然被处理。前者只要头文件被定义一次，就不会再次被处理。 
+
+global.h 
+
+复制代码
+#pragma once
+int g_nValue = 1;
+//说明：因＃pragma once 不被所有的编译器支持（如 bcc 不支持），但
+//＃pragma once 又比＃ifndef...#define...#endif 效率高，如果
+//为了让支持＃pragma once 的编译器有更高的效率有更高的效率，可以采用如下的头文件定义方式/*
+#pragma once //当编译器不支持＃pragma once 时，会直接忽略这行
+ifndef _HEADER_FILE_H_
+#define _HEADER_FILE_H_
+//source code
+#endif
+*/
+复制代码
+test.c
+
+复制代码
+#include <stdio.h>
+#include "global.h"
+#include "global.h" //被 include 两次
+int main()
+{
+    printf("g_nValue = %d \n",g_nValue);
+    return 0;
+}
+复制代码
+3.3.#pragma pack——用于指定内存对齐方式 
+（1）什么是内存对齐   
+
+ 不同类型的数据在内存中按照一定的规则排列而不一定是顺序的一个接一个的排列。 
+
+结构体大小的计算 
+
+ 
+
+复制代码
+#include <stdio.h>
+#pragma pack(2)
+struct Test1
+{
+    char c1; //对齐参数：min(1,2)=1, offset = 0short s; //对齐参数：         min(2,2)=2, offset = 2
+    char c2; //对齐参数：min(1,2)=1, offset = 4
+    int i; //对齐参数：min(4,2)=2, offset = 6
+};
+#pragma pack()
+
+#pragma pack(4)
+struct Test2
+{
+    char c1; //对齐参数：min(1,4)=1, offset = 0
+    char c2; //对齐参数：min(1,4)=1, offset = 1
+    short s; //对齐参数：min(2,4)=2, offset = 2
+    int i; //对齐参数：min(4,4)=4, offset = 4
+};
+#pragma pack()
+
+int main()
+{
+    printf("sizeof(Test1) = %d\n",sizeof(struct Test1)); //10
+    printf("sizeof(Test2) = %d\n",sizeof(struct Test2)); //8
+    return 0;
+}
+复制代码
+（2）为什么需要内存对齐？ 
+
+  CPU 对内存的读取不是连续的，而是分成块读取的，块的大小只能是 1、2、4、8、 16....字节，当读取操作的数据未对齐，则需要两次总线周期来访问内存，此性能会大打折扣 ，某些硬件平台只能从规定的相对地址处读取特定类型的数据，否则产生硬件异常 
+
+（3）#pragma pack(n)能够改变编译器的默认对齐方式（默认是按 4 字节对齐）
+
+    ①struc 占用的内存大小 
+
+        A.第一个成员起始于 0 偏移处 
+
+        B.每个成员以 min(sizeof(成员的类型),n)的对齐参数进行对齐。即偏移地址必须 能被对齐参数整除，在复合结构体中，某个成员（结构体类型）的对齐参数为其内部长度最          大的数据成员的对齐参数作为这个成员的对齐参数。 
+
+②结构体总长度必须为所有对齐参数的整数倍。 
+
+ 
+
+复制代码
+#include <stdio.h>
+#define OFFSET(st,member) ((int)&((struct st*)0)->member)
+#pragma pack(1)
+struct S1
+{
+    short a;
+    long b;//对齐参数：min(4,1)=1,sizeof(long)=4;－>最大成员
+};
+#pragma pack()
+
+#pragma pack(2)
+struct S2
+{
+    char c;//offset = 0;
+    struct S1 d;//offset = 1(对齐参数为 min(1,2)),sizeof(s1)=6;
+    double e;//offset = 8(对齐参数为 min(8,2))
+};
+#pragma pack()
+
+int main()
+{
+    printf("sizeof(struct S1) = %d\n",sizeof(struct S1));//6
+    printf("sizeof(struct S2) = %d\n",sizeof(struct S2));//16
+    printf("Member's Offset of Struct S2:\n");
+    printf("&s2.c=%d, &s2.d=%d, &s2.e=%d\n",
+    OFFSET(S2,c),OFFSET(S2,d),OFFSET(S2,e));
+    return 0;
+}
+复制代码
